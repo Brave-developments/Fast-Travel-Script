@@ -24,10 +24,8 @@ end
 
 -- Main Functions
 local function OpenAirportMenu(airport)
-    print("^2[zindro-airtravel]^7 OpenAirportMenu called for:", airport.name)
-    if isInMenu then 
-        print("^1[zindro-airtravel]^7 Menu already open, returning")
-        return 
+    if isInMenu then
+        return
     end
     isInMenu = true
 
@@ -46,14 +44,12 @@ local function OpenAirportMenu(airport)
 
     local ctxId = 'zindro_travel_' .. randomId()
 
-    print("^2[zindro-airtravel]^7 Registering context menu with ID:", ctxId)
     lib.registerContext({
         id = ctxId,
         title = 'Fly To:',
         options = opts
     })
 
-    print("^2[zindro-airtravel]^7 Showing context menu")
     lib.showContext(ctxId)
 
     -- safety: reset if stuck
@@ -107,12 +103,15 @@ local function StartTravelSequence(destination, departureAirport)
     DoScreenFadeOut(1000)
     Wait(1500)
 
-    -- find arrival airport
+    -- find the arrival airport: pick the one closest to the destination
+    -- (an exact distance threshold never matches, e.g. LS -> Sandy Shores is ~16.7 m apart)
     local arrivalAirport = nil
+    local bestDist = math.huge
     for _, airport in pairs(Config.Airports) do
-        if #(airport.coords - destination.coords) < 10.0 then
+        local d = #(airport.coords - destination.coords)
+        if d < bestDist then
+            bestDist = d
             arrivalAirport = airport
-            break
         end
     end
 
@@ -141,8 +140,6 @@ local function StartTravelSequence(destination, departureAirport)
 
 -- Event Handlers
 RegisterNetEvent('zindro:openMenuForTarget', function(data)
-    print("^2[zindro-airtravel]^7 Event triggered with data:", json.encode(data or {}))
-    
     -- QB-Target passes data in args, so we need to extract it
     local airportIndex = nil
     if data and data.args and data.args.airportIndex then
@@ -151,17 +148,10 @@ RegisterNetEvent('zindro:openMenuForTarget', function(data)
         airportIndex = data.airportIndex
     end
     
-    if not airportIndex then 
-        print("^1[zindro-airtravel]^7 Missing airportIndex in data or args")
-        return 
-    end
+    if not airportIndex then return end
     
     local airport = Config.Airports[airportIndex]
-    if not airport then 
-        print("^1[zindro-airtravel]^7 Airport not found for index:", airportIndex)
-        return 
-    end
-    print("^2[zindro-airtravel]^7 Opening menu for airport:", airport.name)
+    if not airport then return end
     OpenAirportMenu(airport)
 end)
 
